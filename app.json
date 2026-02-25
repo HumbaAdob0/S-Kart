@@ -20,13 +20,16 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "permissions": [],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "blockedPermissions": [
         "android.permission.READ_PHONE_STATE",
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.CAMERA"
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -35,6 +38,19 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "S-Kart needs camera access to scan product barcodes."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "S-Kart needs gallery access to save receipts.",
+          "savePhotosPermission": "S-Kart needs permission to save receipt images."
+        }
+      ],
       [
         "expo-splash-screen",
         {
