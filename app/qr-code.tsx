@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -7,16 +7,18 @@ import {
   Text,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
-import { useCart } from "@/store/cart-context";
 import { formatCurrency } from "@/utils/format-currency";
 import { Colors } from "@/constants/theme";
 import type { Receipt } from "@/types/grocery";
 
 export default function QRCodeScreen() {
-  const { buildReceipt } = useCart();
-  const [receipt] = useState<Receipt>(() => buildReceipt());
+  const { receiptJson } = useLocalSearchParams<{ receiptJson: string }>();
+  const receipt = useMemo<Receipt>(
+    () => JSON.parse(receiptJson),
+    [receiptJson],
+  );
   const router = useRouter();
 
   // Build compact payload for QR code

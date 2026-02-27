@@ -2,7 +2,8 @@ import { Tabs } from "expo-router";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors } from "@/constants/theme";
 import { useCart } from "@/store/cart-context";
-import { View, Text, StyleSheet } from "react-native";
+import { useAuth } from "@/store/auth-context";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 
 function CartBadge() {
   const { itemCount } = useCart();
@@ -15,6 +16,22 @@ function CartBadge() {
 }
 
 export default function TabLayout() {
+  const { role, signOut } = useAuth();
+  const isAdmin = role === "admin";
+
+  const handleLogout = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+    ]);
+  };
+
+  const logoutButton = () => (
+    <TouchableOpacity onPress={handleLogout} style={{ marginRight: 16 }}>
+      <MaterialIcons name="logout" size={24} color="#fff" />
+    </TouchableOpacity>
+  );
+
   return (
     <Tabs
       screenOptions={{
@@ -25,26 +42,55 @@ export default function TabLayout() {
         headerTitleStyle: { fontWeight: "700" },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Scan",
-          headerTitle: "S-Kart Scanner",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="qr-code-scanner" size={size} color={color} />
-          ),
-        }}
-      />
+      {/* Cart is the initial/default tab for all users */}
       <Tabs.Screen
         name="cart"
         options={{
           title: "Cart",
           headerTitle: "Shopping Cart",
+          headerRight: logoutButton,
           tabBarIcon: ({ color, size }) => (
             <View>
               <MaterialIcons name="shopping-cart" size={size} color={color} />
               <CartBadge />
             </View>
+          ),
+        }}
+      />
+      {/* Admin tab — only visible to admins */}
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          headerTitle: "Product Manager",
+          headerRight: logoutButton,
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons
+              name="admin-panel-settings"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      {/* Scanner stays in the group but is hidden from the tab bar */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Scan",
+          headerTitle: "S-Kart Scanner",
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: "History",
+          headerTitle: "Transaction History",
+          headerRight: logoutButton,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="receipt-long" size={size} color={color} />
           ),
         }}
       />

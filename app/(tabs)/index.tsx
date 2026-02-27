@@ -17,10 +17,11 @@ import * as Haptics from "expo-haptics";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 
-import { findProductByBarcode } from "@/data/products";
 import { useCart } from "@/store/cart-context";
+import { useProducts } from "@/store/product-context";
 import { formatCurrency } from "@/utils/format-currency";
 import { Colors } from "@/constants/theme";
+import { esp32, type ConnectionStatus } from "@/services/esp32";
 import type { Product } from "@/types/grocery";
 
 const SCAN_COOLDOWN_MS = 1500;
@@ -30,8 +31,18 @@ export default function ScanScreen() {
   const [lastScanned, setLastScanned] = useState<Product | null>(null);
   const [scanPaused, setScanPaused] = useState(false);
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
-  const { addItem, itemCount } = useCart();
+  const { addItem, itemCount, items } = useCart();
+  const { findByBarcode } = useProducts();
   const router = useRouter();
+
+  // ESP32 connection status indicator
+  const [espStatus, setEspStatus] = useState<ConnectionStatus>(
+    esp32.getStatus(),
+  );
+  useEffect(() => {
+    const unsub = esp32.subscribe((s) => setEspStatus(s));
+    return unsub;
+  }, []);
 
   /* ---- permission not yet determined ---- */
   if (!permission) return <View style={styles.center} />;
@@ -64,11 +75,37 @@ export default function ScanScreen() {
     if (scanPaused) return;
     setScanPaused(true);
 
-    const product = findProductByBarcode(result.data);
+    const product = findByBarcode(result.data);
 
     if (product) {
+      // Check if out of stock
+      if (product.stock <= 0) {
+        Alert.alert(
+          "Out of Stock",
+          `"${product.name}" is currently out of stock.`,
+        );
+        setTimeout(() => setScanPaused(false), SCAN_COOLDOWN_MS);
+        return;
+      }
+
+      // Check if adding would exceed available stock
+      const existing = items.find((i) => i.product.id === product.id);
+      const currentQty = existing ? existing.quantity : 0;
+      if (currentQty >= product.stock) {
+        Alert.alert(
+          "Stock Limit",
+          `Only ${product.stock} "${product.name}" available. You already have ${currentQty} in your cart.`,
+        );
+        setTimeout(() => setScanPaused(false), SCAN_COOLDOWN_MS);
+        return;
+      }
+
       addItem(product);
       setLastScanned(product);
+
+      // Send to ESP32 LCD — find updated qty
+      const newQty = currentQty + 1;
+      esp32.sendItem(product, newQty);
 
       if (Platform.OS === "ios") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -168,6 +205,31 @@ export default function ScanScreen() {
           </View>
         </TouchableOpacity>
       )}
+
+      {/* ESP32 connection indicator */}
+      <View style={styles.espIndicator}>
+        <View
+          style={[
+            styles.espDot,
+            {
+              backgroundColor:
+                espStatus === "connected"
+                  ? Colors.success
+                  : espStatus === "connecting"
+                    ? "#FFA000"
+                    : "#aaa",
+            },
+          ]}
+        />
+        <Text style={styles.espLabel}>
+          LCD{" "}
+          {espStatus === "connected"
+            ? "ON"
+            : espStatus === "connecting"
+              ? "…"
+              : "OFF"}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -285,4 +347,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   fabBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+
+  /* ESP32 indicator */
+  espIndicator: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 6,
+  },
+  espDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  espLabel: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
 });

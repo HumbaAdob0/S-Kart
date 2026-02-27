@@ -76,6 +76,15 @@ export default function CartScreen() {
         showsVerticalScrollIndicator={false}
       />
 
+      {/* Floating add button */}
+      <TouchableOpacity
+        style={styles.addFab}
+        onPress={() => router.push("/")}
+        activeOpacity={0.8}
+      >
+        <MaterialIcons name="add" size={30} color="#fff" />
+      </TouchableOpacity>
+
       {/* Footer totals */}
       <View style={styles.footer}>
         <View style={styles.totalRow}>
@@ -186,4 +195,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   checkoutText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+
+  /* Floating add button */
+  addFab: {
+    position: "absolute",
+    right: 20,
+    bottom: 200,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.success,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    zIndex: 10,
+  },
 });
